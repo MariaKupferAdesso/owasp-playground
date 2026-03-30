@@ -28,6 +28,8 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <!-- Verify the latest version at: https://central.sonatype.com/artifact/org.owasp/dependency-check-maven -->
+        <dependency-check.version>10.0.4</dependency-check.version>
     </properties>
     <dependencies>
         <dependency>
@@ -50,10 +52,43 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Flyway — schema migrations; separate PostgreSQL module required since Flyway 10 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- JJWT 0.12.x — short-lived JWT for stateless authentication (OWASP A01/A07) -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -117,6 +152,37 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+            <!--
+                OWASP Dependency Check — scans all dependencies (including transitive) against
+                the NVD CVE database and fails the build if a vulnerability at or above the
+                configured CVSS threshold is found.
+
+                NOT bound to any lifecycle phase — run explicitly:
+                    ./mvnw dependency-check:check
+
+                First run downloads the NVD data feed (~200 MB) and takes several minutes.
+                Subsequent runs use a local cache and are much faster.
+
+                Optional: set NVD_API_KEY for higher-rate NVD downloads.
+                Register at: https://nvd.nist.gov/developers/request-an-api-key
+            -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${dependency-check.version}</version>
+                <configuration>
+                    <!-- Fail on HIGH or CRITICAL CVEs (CVSS score >= 8).
+                         Lower thresholds (e.g. 7) produce too much noise from medium findings
+                         in transitive dependencies that are not directly exploitable. -->
+                    <failBuildOnCVSS>8</failBuildOnCVSS>
+                    <!-- Reads NVD_API_KEY from the environment if set; falls back to a
+                         slower unauthenticated feed without it. -->
+                    <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+                    <!-- HTML + JSON reports written to target/dependency-check-report.* -->
+                    <formats>HTML,JSON</formats>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

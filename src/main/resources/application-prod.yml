@@ -1,0 +1,18 @@
+# Prod profile — activated by setting SPRING_PROFILES_ACTIVE=prod.
+# Overrides shared defaults with more restrictive production settings.
+# All secrets must be provided via real environment variables — no .env file in production.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Exclude /actuator/info in production — it can leak build metadata.
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: WARN
+    org.example.owaspplayground: INFO

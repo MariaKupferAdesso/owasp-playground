@@ -105,6 +105,18 @@ class SecurityConfigTest {
             mockMvc.perform(get("/actuator/health"))
                     .andExpect(header().exists("Content-Security-Policy"));
         }
+
+        @Test
+        @DisplayName("Cache-Control: no-store on sensitive endpoint (A04)")
+        void cacheControlNoStore() throws Exception {
+            // Unauthenticated request — Spring Security still applies cache headers
+            // before rejecting the request. Verifies sensitive API responses are
+            // not stored by browsers or intermediate proxies.
+            mockMvc.perform(get("/api/orders"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string("Cache-Control", containsString("no-store")))
+                    .andExpect(header().string("Cache-Control", containsString("no-cache")));
+        }
     }
 
     @Nested

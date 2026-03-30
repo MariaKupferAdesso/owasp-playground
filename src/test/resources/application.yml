@@ -1,0 +1,61 @@
+# Test application.yml — replaces src/main/resources/application.yml on the test classpath.
+# All properties required for the application context must be present here.
+spring:
+  application:
+    name: owasp-playground
+
+  datasource:
+    # Overridden at runtime by @ServiceConnection (Testcontainers) — placeholder values
+    url: jdbc:postgresql://localhost:5432/owasp_playground
+    username: owasp_user
+    password: change_me_postgres_123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # create-drop: Hibernate creates the schema from entities in tests.
+      # Flyway is disabled — we test data/access behavior, not migration scripts.
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jakarta:
+          persistence:
+            query:
+              timeout: 5000
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: change_me_redis_123
+      timeout: 2s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+security:
+  cors:
+    allowed-origins: "http://localhost:3000,http://localhost:5173"
+  brute-force:
+    max-attempts: 3
+    lockout-duration: PT1M
+  rate-limit:
+    # High enough not to interfere with other test classes.
+    requests-per-window: 100
+    window-duration: PT1M
+    trust-forwarded-for: false
+  jwt:
+    secret: "dGhpcy1pcy1hLXRlc3Qtc2VjcmV0LWtleS10aGF0LWlzLWxvbmctZW5vdWdo"
+    expiry: PT15M

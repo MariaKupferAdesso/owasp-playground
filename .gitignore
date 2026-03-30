@@ -1,5 +1,8 @@
 HELP.md
 target/
+
+# Local secrets — never commit. Use .env.example as a template.
+.env
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

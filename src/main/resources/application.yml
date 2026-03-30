@@ -2,10 +2,22 @@ spring:
   application:
     name: owasp-playground
 
+  # Load .env for local development. The file is optional so CI/CD and production
+  # environments that supply secrets via real environment variables are unaffected.
+  # Secrets in environment variables always take precedence over .env values.
+  config:
+    import: optional:file:.env[.properties]
+
+  # Default to the dev profile so the app starts without -Dspring-boot.run.profiles.
+  # Production deployments must set SPRING_PROFILES_ACTIVE=prod explicitly.
+  profiles:
+    default: dev
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/owasp_playground
-    username: owasp_user
-    password: change_me_postgres_123
+    # Reuses the same variable names as docker-compose.yml — one .env file serves both.
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:owasp_playground}
+    username: ${POSTGRES_USER:owasp_user}
+    password: ${POSTGRES_PASSWORD}            # required — no insecure default
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -15,6 +27,16 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        # Query timeout (A10) — prevents slow or malicious queries from holding DB connections
+        # indefinitely and exhausting the connection pool (fail-closed resource control).
+        # Value is in milliseconds; 5 s is generous for a simple OLTP API.
+        # Limitation: hint-based — not all JDBC drivers honour it; PostgreSQL does via
+        # socketTimeout but this is an application-level safeguard, not a replacement for
+        # statement_timeout at the DB level.
+        jakarta:
+          persistence:
+            query:
+              timeout: 5000
     show-sql: false
 
   flyway:
@@ -23,9 +45,9 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: change_me_redis_123
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}             # required — no insecure default
       timeout: 2s
 
 management:
@@ -39,5 +61,18 @@ management:
 
 security:
   cors:
-    # Comma-separated — required for @Value injection into List<String>
-    allowed-origins: "http://localhost:3000,http://localhost:5173"
+    # Override via CORS_ALLOWED_ORIGINS env var in production.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  brute-force:
+    max-attempts: 5
+    lockout-duration: PT15M
+  rate-limit:
+    requests-per-window: 100
+    window-duration: PT1M
+    # Set to true only when running behind a trusted reverse proxy (nginx, ALB) that
+    # reliably overwrites X-Forwarded-For. When false (default), the socket-level
+    # remote address is used — not spoofable by clients.
+    trust-forwarded-for: false
+  jwt:
+    secret: ${JWT_SECRET}                     # required — no insecure default
+    expiry: PT15M

@@ -1,0 +1,9 @@
+# Dev profile — activated by default (see spring.profiles.default in application.yml).
+# Contains only non-sensitive developer conveniences.
+# Secrets are still loaded from .env / environment variables, never hardcoded here.
+
+logging:
+  level:
+    org.example.owaspplayground: DEBUG
+    org.springframework.security: DEBUG
+    org.flywaydb: DEBUG
